@@ -20,8 +20,11 @@ from utils.plots import feature_visualization
 from utils.torch_utils import (fuse_conv_and_bn, initialize_weights, model_info, profile, scale_img, select_device,
                                time_sync)
 from utils.tal.anchor_generator import make_anchors, dist2bbox
-from models.mobilenetv4 import *
-from models.repvit import *
+
+# Backbone
+from models.backbone.mobilenetv4 import *
+from models.backbone.repvit import *
+from models.backbone.starnet import *
 
 try:
     import thop  # for FLOPs computation
@@ -757,7 +760,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
         if m in {
             Conv, AConv, ConvTranspose, 
             Bottleneck, SPP, SPPF, DWConv, BottleneckCSP, nn.ConvTranspose2d, DWConvTranspose2d, SPPCSPC, ADown,
-            RepNCSPELAN4, SPPELAN}:
+            RepNCSPELAN4, SPPELAN, DCNv2, DRepNCSPELAN4}:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
@@ -795,8 +798,9 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             t = m
             m = timm.create_model(m, pretrained=args[0], features_only=True)
             c2 = m.feature_info.channels()
-        elif m in {MobileNetV4ConvSmall, MobileNetV4ConvMedium, MobileNetV4ConvLarge,
-                   repvit_m0_9}:
+        elif m in {MobileNetV4ConvSmall, MobileNetV4ConvMedium, MobileNetV4ConvLarge, MobileNetV4HybridMedium, MobileNetV4HybridLarge,
+                   repvit_m0_9, repvit_m1_0, repvit_m1_1, repvit_m1_5, repvit_m2_3,
+                   starnet_s050, starnet_s100, starnet_s150, starnet_s1, starnet_s2, starnet_s3, starnet_s4}:
             m = m(*args)
             c2 = m.channel
         else:
@@ -827,7 +831,7 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--cfg', type=str, default='yolov9.yaml', help='model.yaml')
+    parser.add_argument('--cfg', type=str, default='models/detect/yolov9-c.yaml', help='model.yaml')
     parser.add_argument('--batch-size', type=int, default=1, help='total batch size for all GPUs')
     parser.add_argument('--device', default='', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--profile', action='store_true', help='profile model speed')
@@ -840,8 +844,9 @@ if __name__ == '__main__':
 
     # Create model
     im = torch.rand(opt.batch_size, 3, 640, 640).to(device)
-    model = Model(opt.cfg).to(device)
-    model.eval()
+    model = Model(opt.cfg).to(device).eval()
+    for idx, output in enumerate(model(im)[1][0]):
+        print(f'layer {idx + 1} output shape:{output.size()}')
 
     # Options
     if opt.line_profile:  # profile layer by layer
