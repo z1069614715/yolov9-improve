@@ -26,6 +26,9 @@ from models.backbone.mobilenetv4 import *
 from models.backbone.repvit import *
 from models.backbone.starnet import *
 
+# ExtraModule
+from models.extra_module.dysnakeconv import DySnakeConv
+
 try:
     import thop  # for FLOPs computation
 except ImportError:
@@ -758,9 +761,9 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
 
         n = n_ = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in {
-            Conv, AConv, ConvTranspose, 
-            Bottleneck, SPP, SPPF, DWConv, BottleneckCSP, nn.ConvTranspose2d, DWConvTranspose2d, SPPCSPC, ADown,
-            RepNCSPELAN4, SPPELAN, DCNv2, DRepNCSPELAN4}:
+            Conv, AConv, ConvTranspose, Bottleneck, SPP, SPPF, DWConv, BottleneckCSP, nn.ConvTranspose2d, DWConvTranspose2d, SPPCSPC, ADown,
+            RepNCSPELAN4, SPPELAN, DCNv2, DRepNCSPELAN4, DCNV3RepNCSPELAN4, PRepNCSPELAN4, FasterRepNCSPELAN4, CoordConv, DySnakeConv,
+            DySnakeRepNCSPELAN4}:
             c1, c2 = ch[f], args[0]
             if c2 != no:  # if not output
                 c2 = make_divisible(c2 * gw, 8)
