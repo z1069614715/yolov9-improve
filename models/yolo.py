@@ -25,6 +25,7 @@ from utils.tal.anchor_generator import make_anchors, dist2bbox
 from models.backbone.mobilenetv4 import *
 from models.backbone.repvit import *
 from models.backbone.starnet import *
+from models.backbone.fasternet import *
 
 # ExtraModule
 from models.extra_module.dysnakeconv import DySnakeConv
@@ -628,12 +629,14 @@ class DetectionModel(BaseModel):
         self.inplace = self.yaml.get('inplace', True)
 
         # Build strides, anchors
+        if torch.cuda.is_available():
+            self.model.to(torch.device('cuda:0'))
         m = self.model[-1]  # Detect()
         if isinstance(m, (Detect, DDetect, Segment, DSegment, Panoptic)):
             s = 256  # 2x min stride
             m.inplace = self.inplace
             forward = lambda x: self.forward(x)[0] if isinstance(m, (Segment, DSegment, Panoptic)) else self.forward(x)
-            m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s))])  # forward
+            m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s).to(torch.device('cuda:0')) if torch.cuda.is_available() else torch.zeros(1, ch, s, s))]).cpu()  # forward
             # check_anchor_order(m)
             # m.anchors /= m.stride.view(-1, 1, 1)
             self.stride = m.stride
@@ -642,7 +645,7 @@ class DetectionModel(BaseModel):
             s = 256  # 2x min stride
             m.inplace = self.inplace
             forward = lambda x: self.forward(x)[0][0] if isinstance(m, (DualDSegment)) else self.forward(x)[0]
-            m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s))])  # forward
+            m.stride = torch.tensor([s / x.shape[-2] for x in forward(torch.zeros(1, ch, s, s).to(torch.device('cuda:0')) if torch.cuda.is_available() else torch.zeros(1, ch, s, s))]).cpu()  # forward
             # check_anchor_order(m)
             # m.anchors /= m.stride.view(-1, 1, 1)
             self.stride = m.stride
@@ -803,7 +806,9 @@ def parse_model(d, ch):  # model_dict, input_channels(3)
             c2 = m.feature_info.channels()
         elif m in {MobileNetV4ConvSmall, MobileNetV4ConvMedium, MobileNetV4ConvLarge, MobileNetV4HybridMedium, MobileNetV4HybridLarge,
                    repvit_m0_9, repvit_m1_0, repvit_m1_1, repvit_m1_5, repvit_m2_3,
-                   starnet_s050, starnet_s100, starnet_s150, starnet_s1, starnet_s2, starnet_s3, starnet_s4}:
+                   starnet_s050, starnet_s100, starnet_s150, starnet_s1, starnet_s2, starnet_s3, starnet_s4,
+                   fasternet_t0, fasternet_t1, fasternet_t2, fasternet_s, fasternet_m, fasternet_l
+                   }:
             m = m(*args)
             c2 = m.channel
         else:

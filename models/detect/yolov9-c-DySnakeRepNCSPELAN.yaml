@@ -40,7 +40,7 @@ backbone:
    [-1, 1, ADown, [512]],  # 8-P5/32
 
    # elan-2 block
-   [-1, 1, RepNCSPELAN4, [512, 512, 256, 1]],  # 9
+   [-1, 1, DySnakeRepNCSPELAN4, [512, 512, 256, 1]],  # 9
   ]
 
 # YOLOv9 head
@@ -113,7 +113,7 @@ head:
    [[25, -1], 1, CBFuse, [[2]]], # 36
 
    # elan-2 block
-   [-1, 1, DySnakeRepNCSPELAN4, [512, 512, 256, 1]],  # 37
+   [-1, 1, RepNCSPELAN4, [512, 512, 256, 1]],  # 37
    
    
    
